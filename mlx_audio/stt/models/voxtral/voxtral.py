@@ -345,7 +345,7 @@ class Model(nn.Module):
         input_features: Optional[mx.array] = None,
         max_tokens: int = 128,
         sampler: Optional[Callable[mx.array, mx.array]] = None,
-        generation_stream: bool = False,
+        generation_stream: Optional[mx.Stream] = None,
         verbose: bool = False,
     ) -> Generator[Tuple[mx.array, mx.array], None, None]:
 
@@ -356,7 +356,8 @@ class Model(nn.Module):
             input_features=input_features,
         )[0]
 
-        with wired_limit(self, [generation_stream]):
+        streams = [generation_stream] if generation_stream is not None else None
+        with wired_limit(self, streams):
             for n, (token, logprobs) in tqdm(
                 enumerate(
                     generate_step(
@@ -389,7 +390,7 @@ class Model(nn.Module):
         min_tokens_to_keep: int = 1,
         language: str = "en",
         verbose: bool = False,
-        generation_stream: bool = False,
+        generation_stream: Optional[mx.Stream] = None,
     ) -> mx.array:
 
         start_time = time.time()

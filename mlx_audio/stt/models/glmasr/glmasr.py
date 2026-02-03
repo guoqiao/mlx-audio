@@ -476,7 +476,7 @@ class Model(nn.Module):
         audio_length: Optional[List[List[int]]] = None,
         max_tokens: int = 128,
         sampler: Optional[Callable[[mx.array], mx.array]] = None,
-        generation_stream: bool = False,
+        generation_stream: Optional[mx.Stream] = None,
         verbose: bool = False,
     ) -> Generator[Tuple[mx.array, mx.array], None, None]:
         """Stream generate tokens from input.
@@ -488,7 +488,8 @@ class Model(nn.Module):
             audio_length: Lengths of audio embeddings
             max_tokens: Maximum tokens to generate
             sampler: Sampler function for token selection
-            generation_stream: Whether to enable generation streaming
+            generation_stream: Generation stream to use
+            verbose: Print tokens during generation
 
         Yields:
             Tuple of (token, logprobs)
@@ -504,7 +505,8 @@ class Model(nn.Module):
             0
         ]  # Remove batch dimension for generate_step
 
-        with wired_limit(self, [generation_stream]):
+        streams = [generation_stream] if generation_stream is not None else None
+        with wired_limit(self, streams):
             prompt = input_ids[0] if input_ids.ndim > 1 else input_ids
             for token, logprobs in tqdm(
                 generate_step(
@@ -533,7 +535,7 @@ class Model(nn.Module):
         top_k: int = 0,
         min_p: float = 0.0,
         min_tokens_to_keep: int = 1,
-        generation_stream: bool = False,
+        generation_stream: Optional[mx.Stream] = None,
         verbose: bool = False,
         **kwargs,
     ) -> STTOutput:
@@ -547,7 +549,7 @@ class Model(nn.Module):
             top_k: Top-k sampling parameter
             min_p: Minimum probability threshold
             min_tokens_to_keep: Minimum tokens to keep in sampling
-            generation_stream: Whether to enable generation streaming
+            generation_stream: Generation stream to use
             verbose: Print tokens during generation
             **kwargs: Additional arguments (ignored for compatibility)
 
