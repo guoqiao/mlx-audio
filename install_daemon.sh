@@ -3,19 +3,22 @@
 set -ueo pipefail
 
 # Set up macOS LaunchAgent to run mlx-audio server as a service with reliability
-SERVICE_NAME="me.guoqiao.mlx-audio-server"
-PLIST_PATH="$HOME/Library/LaunchAgents/${SERVICE_NAME}.plist"
-LOG_PATH="output/mlx_audio_server.log"
-mkdir -p $(dirname $LOG_PATH)
+domain_target="gui/$(id -u)"
+service_id="me.guoqiao.mlx-audio-server"
+service_target="${domain_target}/${service_id}"
+service_path="${HOME}/Library/LaunchAgents/${service_id}.plist"
 
-cat <<EOF > "$PLIST_PATH"
+log_path="output/mlx_audio_server.log"
+mkdir -p $(dirname $log_path)
+
+cat <<EOF > "${service_path}"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 
     <key>Label</key>
-    <string>${SERVICE_NAME}</string>
+    <string>${service_id}</string>
 
     <key>WorkingDirectory</key>
     <string>$(pwd)</string>
@@ -33,10 +36,10 @@ cat <<EOF > "$PLIST_PATH"
     <true/>
 
     <key>StandardOutPath</key>
-    <string>${LOG_PATH}</string>
+    <string>${log_path}</string>
 
     <key>StandardErrorPath</key>
-    <string>${LOG_PATH}</string>
+    <string>${log_path}</string>
 
     <key>EnvironmentVariables</key>
     <dict>
@@ -50,21 +53,15 @@ cat <<EOF > "$PLIST_PATH"
 </plist>
 EOF
 
-# cat "$PLIST_PATH"
-
 # Unload the job if it's already loaded (ignore errors if not loaded)
-launchctl bootout "gui/$(id -u)" "$PLIST_PATH" 2>/dev/null || true
+launchctl bootout ${domain_target} ${service_path} 2>/dev/null || true
 
 # Load (or reload) the job
-launchctl bootstrap "gui/$(id -u)" "$PLIST_PATH"
+launchctl bootstrap ${domain_target} ${service_path}
 
-# Optionally (re-)kickstart the job to ensure it's running the latest version
-# launchctl kickstart -k "gui/$(id -u)/${SERVICE_NAME}"
+echo "launchd daemon service bootstrapped:"
+echo "service path: $service_path"
+echo "check log: tail -f $log_path"
+echo "restart: launchctl kickstart -k ${service_target}"
+echo "show status: launchctl print ${service_target}"
 
-# Show current status
-# launchctl print "gui/$(id -u)/${SERVICE_NAME}"
-
-echo "daemon service bootstrapped:"
-echo "plist file: $PLIST_PATH"
-echo "check log: tail -f $LOG_PATH"
-echo "restart: launchctl kickstart -k gui/$(id -u)/${SERVICE_NAME}"
